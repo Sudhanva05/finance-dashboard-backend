@@ -52,3 +52,19 @@ def get_records(
         query = query.filter(Record.amount <= max_amount)
 
     return query.all()
+
+@router.get("/summary")
+def get_summary(
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    records = db.query(Record).all()
+
+    total_income = sum(r.amount for r in records if r.category.lower() == "income")
+    total_expense = sum(r.amount for r in records if r.category.lower() == "expense")
+
+    return {
+        "total_income": total_income,
+        "total_expense": total_expense,
+        "net_balance": total_income - total_expense
+    }
