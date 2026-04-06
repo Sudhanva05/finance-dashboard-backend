@@ -28,19 +28,30 @@ def create_record(
     db.commit()
     db.refresh(new_record)
 
-    return new_record
+    return {
+    "message": "Record created successfully",
+    "data": new_record
+}
 
 
 #  Get all records (any logged user)
+from typing import Optional
+
 @router.get("/")
 def get_records(
     category: Optional[str] = None,
     min_amount: Optional[float] = None,
     max_amount: Optional[float] = None,
+    skip: int = 0,
+    limit: int = 10,
     db: Session = Depends(get_db),
     user = Depends(get_current_user)
 ):
     query = db.query(Record)
+
+    # 🔐 show only user's records (unless admin)
+    if user.role != "admin":
+        query = query.filter(Record.user_id == user.id)
 
     if category:
         query = query.filter(Record.category == category)
@@ -51,7 +62,12 @@ def get_records(
     if max_amount:
         query = query.filter(Record.amount <= max_amount)
 
-    return query.all()
+    records = query.offset(skip).limit(limit).all()
+
+    return {
+        "count": len(records),
+        "data": records
+    }
 
 @router.get("/summary")
 def get_summary(
